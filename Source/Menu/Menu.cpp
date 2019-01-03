@@ -965,6 +965,8 @@ int setKeySelected_thread(void*)
             case SDL_MOUSEBUTTONDOWN:
                 scancode = SDL_NUM_SCANCODES + evenement.button.button;
                 break;
+            case SDL_CONTROLLERBUTTONDOWN:
+                scancode = SDL_NUM_SCANCODES + numMouseButtons + evenement.cbutton.button;
             default:
                 break;
         }

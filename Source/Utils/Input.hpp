@@ -25,6 +25,8 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 
+#include <string>
+
 /**> CONSTANT DECLARATIONS <**/
 #define MOUSEBUTTON_LEFT (SDL_NUM_SCANCODES + SDL_BUTTON_LEFT)
 #define MOUSEBUTTON_RIGHT (SDL_NUM_SCANCODES + SDL_BUTTON_RIGHT)
@@ -32,14 +34,18 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #define MOUSEBUTTON_X1 (SDL_NUM_SCANCODES + SDL_BUTTON_X1)
 #define MOUSEBUTTON_X2 (SDL_NUM_SCANCODES + SDL_BUTTON_X2)
 
+static const int numMouseButtons = 6;
+
 /**> FUNCTION PROTOTYPES <**/
 class Input
 {
 public:
+    static void Init();
     static void Tick();
     static bool isKeyDown(int k);
     static bool isKeyPressed(int k);
-    static const char* keyToChar(unsigned short which);
+    static std::string keyToChar(unsigned short which);
+    static float GetAxis(SDL_GameControllerAxis axis);
     static bool MouseClicked();
 };
 

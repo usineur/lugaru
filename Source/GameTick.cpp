@@ -1180,7 +1180,7 @@ void Game::ProcessInput()
     Input::Tick();
 
     /* Menu handling (main menu, leave game) */
-    if (Input::isKeyPressed(SDL_SCANCODE_ESCAPE) &&
+    if ((Input::isKeyPressed(SDL_SCANCODE_ESCAPE) || Input::isKeyPressed(SDL_NUM_SCANCODES + numMouseButtons + SDL_CONTROLLER_BUTTON_START)) &&
         (gameon || mainmenu == 0)) {
         selected = -1;
         if (mainmenu == 0 && !winfreeze) {
@@ -3380,10 +3380,10 @@ void Game::Tick()
 
             //control keys
             if (!Dialog::inDialog()) {
-                Person::players[0]->forwardkeydown = Input::isKeyDown(forwardkey);
-                Person::players[0]->leftkeydown = Input::isKeyDown(leftkey);
-                Person::players[0]->backkeydown = Input::isKeyDown(backkey);
-                Person::players[0]->rightkeydown = Input::isKeyDown(rightkey);
+                Person::players[0]->forwardkeydown = Input::isKeyDown(forwardkey) || Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTY) < -0.4;
+                Person::players[0]->leftkeydown = Input::isKeyDown(leftkey) || Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTX) < -0.4;
+                Person::players[0]->backkeydown = Input::isKeyDown(backkey) || Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTY) > 0.4;
+                Person::players[0]->rightkeydown = Input::isKeyDown(rightkey) || Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTX) > 0.4;
                 Person::players[0]->jumpkeydown = Input::isKeyDown(jumpkey);
                 Person::players[0]->crouchkeydown = Input::isKeyDown(crouchkey);
                 Person::players[0]->drawkeydown = Input::isKeyDown(drawkey);

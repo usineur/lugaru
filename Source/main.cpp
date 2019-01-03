@@ -25,6 +25,7 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #include "Platform/Platform.hpp"
 #include "User/Settings.hpp"
 #include "Menu/Menu.hpp"
+#include "Utils/Input.hpp"
 #include "Version.hpp"
 
 #include <fstream>
@@ -184,12 +185,14 @@ bool SetUp()
 
     DefaultSettings();
 
-    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
-        if (SDL_Init(SDL_INIT_VIDEO) == -1) {
+    const unsigned sdlSubsystems = SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER;
+    if (SDL_WasInit(sdlSubsystems) != sdlSubsystems) {
+        if (SDL_Init(sdlSubsystems) == -1) {
             fprintf(stderr, "SDL_Init() failed: %s\n", SDL_GetError());
             return false;
         }
     }
+    Input::Init();
     if (!LoadSettings()) {
         fprintf(stderr, "Failed to load config, creating default\n");
         SaveSettings();
@@ -710,6 +713,9 @@ int main(int argc, char** argv)
                             }
                         }
                     }
+
+                    deltah += 5.f * std::min(1.f, std::max(-1.f, Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTX) + Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT) - Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT)));
+                    deltav += 5.f * Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTY);
 
                     // game
                     DoUpdate();

@@ -63,6 +63,8 @@ std::string Folders::getUserDataPath()
     } else {
         userDataPath = std::string(homePath) + "/Library/Application Support/Lugaru";
     }
+#elif __SWITCH__
+    userDataPath = "Data";
 #else // Linux
     userDataPath = getGenericDirectory("XDG_DATA_HOME", ".local/share");
 #endif
@@ -75,6 +77,8 @@ std::string Folders::getConfigFilePath()
     std::string configFolder;
 #if defined(_WIN32) || (defined(__APPLE__) && defined(__MACH__))
     configFolder = getUserDataPath();
+#elif __SWITCH__
+    configFolder = ".";
 #else // Linux
     configFolder = getGenericDirectory("XDG_CONFIG_HOME", ".config");
     makeDirectory(configFolder);
@@ -122,6 +126,8 @@ bool Folders::makeDirectory(const std::string& path)
 #ifdef _WIN32
     int status = CreateDirectory(path.c_str(), NULL);
     return ((status != 0) || (GetLastError() == ERROR_ALREADY_EXISTS));
+#elif __SWITCH__
+    return true;
 #else
     errno = 0;
     int status = mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

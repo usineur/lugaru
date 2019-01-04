@@ -35,6 +35,10 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
+
 using namespace Game;
 
 #ifdef WIN32
@@ -75,6 +79,8 @@ int kContextHeight;
 //-----------------------------------------------------------------------------------------------------------------------
 
 // OpenGL Drawing
+
+SDL_GLContext glctx;
 
 void initGL()
 {
@@ -235,6 +241,9 @@ bool SetUp()
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 1);
+#ifdef __SWITCH__
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+#endif
 
     Uint32 sdlflags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
     if (commandLineOptions[FULLSCREEN]) {
@@ -271,7 +280,10 @@ bool SetUp()
         }
     }
 
-    SDL_GLContext glctx = SDL_GL_CreateContext(sdlwindow);
+    glctx = SDL_GL_CreateContext(sdlwindow);
+#ifdef __SWITCH__
+        gladLoadGLLoader(SDL_GL_GetProcAddress);
+#endif
     if (!glctx) {
         fprintf(stderr, "SDL_GL_CreateContext() failed: %s\n", SDL_GetError());
         SDL_Quit();
@@ -479,7 +491,14 @@ void CleanUp(void)
 
     delete[] commandLineOptionsBuffer;
 
+    SDL_GL_DeleteContext(glctx);
+    SDL_DestroyWindow(sdlwindow);
+    SDL_GL_UnloadLibrary();
     SDL_Quit();
+
+#ifdef NXLINK
+    socketExit();
+#endif
 }
 
 // --------------------------------------------------------------------------
@@ -615,6 +634,10 @@ option::Option* commandLineOptionsBuffer;
 
 int main(int argc, char** argv)
 {
+#ifdef NXLINK
+    socketInitializeDefault();
+    nxlinkStdio();
+#endif
     argc -= (argc > 0);
     argv += (argc > 0); // skip program name argv[0] if present
     option::Stats stats(true, usage, argc, argv);
@@ -714,8 +737,13 @@ int main(int argc, char** argv)
                         }
                     }
 
-                    deltah += 5.f * std::min(1.f, std::max(-1.f, Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTX) + Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT) - Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT)));
-                    deltav += 5.f * Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTY);
+                    if (mainmenu) {
+                        deltah += 20.f * std::min(1.f, std::max(-1.f, Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTX) + Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT) - Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT)));
+                        deltav += 20.f * Input::GetAxis(SDL_CONTROLLER_AXIS_LEFTY);
+                    } else {
+                        deltah += 5.f * std::min(1.f, std::max(-1.f, Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTX) + Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT) - Input::GetAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT)));
+                        deltav += 5.f * Input::GetAxis(SDL_CONTROLLER_AXIS_RIGHTY);
+                    }
 
                     // game
                     DoUpdate();

@@ -66,8 +66,9 @@ extern float accountcampaigntime[10];
 extern int accountcampaignchoicesmade[10];
 extern int accountcampaignchoices[10][5000];
 
-void LOG(const std::string&, ...)
+void LOG(const std::string& s, ...)
 {
+    printf("%s\n", s.c_str());
     // !!! FIXME: write me.
 }
 
@@ -142,6 +143,18 @@ void LoadSave(const std::string& fileName, GLubyte* array)
         }
     }
 }
+
+#ifdef __SWITCH__
+void gluPerspective(GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar)
+{
+    GLdouble fW, fH;
+
+    fH = tan( (fovY / 2) / 180 * 3.1415926535897932384626433832795029L ) * zNear;
+    fW = fH * aspect;
+
+    glFrustum( -fW, fW, -fH, fH, zNear, zFar );
+}
+#endif
 
 //***************> ResizeGLScene() <******/
 GLvoid Game::ReSizeGLScene(float fov, float pnear)

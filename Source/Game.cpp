@@ -25,6 +25,10 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <SDL_thread.h>
 
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
+
 extern int mainmenu;
 
 const char* pathtypenames[] = { "keepwalking", "pause" };
@@ -136,6 +140,14 @@ void Game::fireSound(int sound)
 
 void Game::inputText(string& str, unsigned* charselected)
 {
+#ifdef __SWITCH__
+    char tmpstr[16] = { 0 };
+    SwkbdConfig kbd;
+    swkbdCreate(&kbd, 0);
+    swkbdConfigMakePresetDefault(&kbd);
+    swkbdShow(&kbd, tmpstr, sizeof(tmpstr));
+    str = string(tmpstr);
+#else
     SDL_Event evenement;
 
     if (!waiting) {
@@ -192,4 +204,5 @@ void Game::inputText(string& str, unsigned* charselected)
     if (!waiting) {
         SDL_StopTextInput();
     }
+#endif
 }

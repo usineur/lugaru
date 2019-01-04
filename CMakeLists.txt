@@ -1,3 +1,8 @@
+if (SWITCH)
+    include(CMakeLists.switch)
+    return()
+endif()
+
 project(lugaru)
 
 cmake_minimum_required(VERSION 3.5)

@@ -118,5 +118,9 @@ std::string Input::keyToChar(unsigned short i)
 
 bool Input::MouseClicked()
 {
+#ifdef __SWITCH__
+    return isKeyPressed(MOUSEBUTTON_LEFT) || isKeyPressed(519); // Ugly hack: press A as mouse click
+#else
     return isKeyPressed(MOUSEBUTTON_LEFT);
+#endif
 }

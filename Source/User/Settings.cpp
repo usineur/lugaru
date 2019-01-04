@@ -31,8 +31,13 @@ void DefaultSettings()
     detail = 2;
     ismotionblur = 1;
     usermousesensitivity = 1;
+#ifdef __SWITCH__
+    newscreenwidth = kContextWidth = 1920;
+    newscreenheight = kContextHeight = 1080;
+#else
     newscreenwidth = kContextWidth = 1024;
     newscreenheight = kContextHeight = 768;
+#endif
     fullscreen = 0;
     floatjump = 0;
     autoslomo = 1;
@@ -54,6 +59,17 @@ void DefaultSettings()
     ambientsound = 1;
     devtools = 0;
 
+#ifdef __SWITCH__
+    crouchkey = 518;
+    jumpkey = 519;
+    leftkey = 531;
+    forwardkey = 529;
+    backkey = 530;
+    rightkey = 532;
+    drawkey = 520;
+    throwkey = 527;
+    attackkey = 528;
+#else
     crouchkey = SDL_SCANCODE_LSHIFT;
     jumpkey = SDL_SCANCODE_SPACE;
     leftkey = SDL_SCANCODE_A;
@@ -63,6 +79,7 @@ void DefaultSettings()
     drawkey = SDL_SCANCODE_E;
     throwkey = SDL_SCANCODE_Q;
     attackkey = MOUSEBUTTON_LEFT;
+#endif
     consolekey = SDL_SCANCODE_GRAVE;
 
     newdetail = detail;

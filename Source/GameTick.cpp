@@ -36,7 +36,7 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #include "Utils/Folders.hpp"
 #include "Utils/Input.hpp"
 
-#if PLATFORM_UNIX
+#if defined(PLATFORM_UNIX) || defined(__SWITCH__)
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

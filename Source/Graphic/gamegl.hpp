@@ -42,6 +42,8 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
 #include <OpenGL/glu.h>
+#elif __SWITCH__
+#include "glad/glad.h"
 #else
 #include <GL/gl.h>
 #include <GL/glext.h>

@@ -1,8 +1,3 @@
-if (SWITCH)
-    include(CMakeLists.switch)
-    return()
-endif()
-
 project(lugaru)
 
 cmake_minimum_required(VERSION 3.5)
@@ -202,7 +197,9 @@ endif(APPLE)
 
 ### Dependencies
 
+if (NOT SWITCH_LIBNX)
 find_package(OpenGL REQUIRED)
+endif(NOT SWITCH_LIBNX)
 
 # Windows is funky about OpenAL detection
 if(WIN32)
@@ -241,6 +238,12 @@ set(LUGARU_LIBS ${OPENAL_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY} ${SDL2_LIBRARIE
 
 ### Definitions
 
+if(SWITCH_LIBNX)
+    set(LUGARU_SRCS ${LUGARU_SRCS} ${SRCDIR}/Thirdparty/glad/glad.c)
+    set(LUGARU_H ${LUGARU_H} ${SRCDIR}/Thirdparty/glad/glad.h)
+    set(LUGARU_LIBS ${LUGARU_LIBS} ${ZLIB_LIBRARY})
+endif(SWITCH_LIBNX)
+
 add_executable(lugaru ${LUGARU_SRCS} ${LUGARU_H} ${LUGARU_OBJS})
 target_link_libraries(lugaru ${LUGARU_LIBS})
 
@@ -251,7 +254,14 @@ if(WIN32)
         add_definitions(-DWIN32)
     endif(MINGW)
 else(WIN32)
-    add_definitions(-DPLATFORM_LINUX=1 -DPLATFORM_UNIX=1 -DBinIO_STDINT_HEADER=<stdint.h>)
+    if(SWITCH_LIBNX)
+        set(CMAKE_C_FLAGS "-O2 -ffunction-sections -fdata-sections -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE -ftls-model=local-exec")
+        set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+        include_directories($ENV{DEVKITPRO}/libnx/include)
+        add_definitions(-DBinIO_STDINT_HEADER=<stdint.h> -D__SWITCH__)
+    else(SWITCH_LIBNX)
+        add_definitions(-DPLATFORM_LINUX=1 -DPLATFORM_UNIX=1 -DBinIO_STDINT_HEADER=<stdint.h>)
+    endif(SWITCH_LIBNX)
 endif(WIN32)
 
 
@@ -339,3 +349,16 @@ install(FILES ${CMAKE_SOURCE_DIR}/AUTHORS
               ${CMAKE_SOURCE_DIR}/Docs/README.SevenTasks.txt
               ${CMAKE_SOURCE_DIR}/Docs/README.Temple.txt
         DESTINATION ${LUGARU_DOCDIR})
+
+if(SWITCH_LIBNX)
+    add_custom_target(${CMAKE_PROJECT_NAME}.nro
+        DEPENDS ${CMAKE_PROJECT_NAME}
+        COMMAND nacptool --create "Lugaru" "usineur" ${LUGARU_VERSION_NUMBER} ${CMAKE_PROJECT_NAME}.nacp
+        COMMAND elf2nro ${CMAKE_PROJECT_NAME} ${CMAKE_PROJECT_NAME}.nro --icon=${CMAKE_SOURCE_DIR}/icon.jpg --nacp=${CMAKE_PROJECT_NAME}.nacp
+    )
+
+    add_custom_target(nxlink
+        DEPENDS ${CMAKE_PROJECT_NAME}.nro
+        COMMAND nxlink -a $(SWITCHIP) ${CMAKE_PROJECT_NAME}.nro -s -p ${CMAKE_PROJECT_NAME}/${CMAKE_PROJECT_NAME}.nro
+    )
+endif(SWITCH_LIBNX)

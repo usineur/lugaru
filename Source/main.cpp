@@ -282,7 +282,7 @@ bool SetUp()
 
     glctx = SDL_GL_CreateContext(sdlwindow);
 #ifdef __SWITCH__
-        gladLoadGLLoader(SDL_GL_GetProcAddress);
+    gladLoadGLLoader(SDL_GL_GetProcAddress);
 #endif
     if (!glctx) {
         fprintf(stderr, "SDL_GL_CreateContext() failed: %s\n", SDL_GetError());

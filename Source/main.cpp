@@ -34,6 +34,7 @@ along with Lugaru.  If not, see <http://www.gnu.org/licenses/>.
 #include <set>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef __SWITCH__
 #include <switch.h>
@@ -707,6 +708,8 @@ int main(int argc, char** argv)
 
             bool gameDone = false;
             bool gameFocused = true;
+
+            srand(time(nullptr));
 
             if (commandLineOptions[CMD].count() > 0) {
                 devtools = true;

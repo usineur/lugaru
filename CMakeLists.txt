@@ -19,7 +19,7 @@ endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif(NOT CMAKE_BUILD_TYPE)
+endif()
 message(STATUS "CMake build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-parentheses -pedantic --std=gnu++11 ${CMAKE_CXX_FLAGS}")
@@ -30,11 +30,16 @@ if(APPLE)
         "Minimum OS X version to target for deployment (at runtime); newer APIs weak linked. Set to empty string for default value")
     set(CMAKE_OSX_SYSROOT "/Developer/SDKs/MacOSX10.11.sdk" CACHE PATH
         "The product will be built against the headers and libraries located inside the indicated SDK.")
-endif(APPLE)
+endif()
+
+if(WIN32 AND MINGW)
+    # Recent mingw requires this, see https://sourceforge.net/p/mingw-w64/bugs/818/
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
+endif()
 
 if(LINUX)
     option(SYSTEM_INSTALL "Enable system-wide installation, with hardcoded data directory defined with CMAKE_INSTALL_DATADIR" OFF)
-endif(LINUX)
+endif()
 
 
 ### Version
@@ -188,33 +193,35 @@ if(WIN32)
                        DEPENDS ${SRCDIR}/Lugaru.rc
     )
     set(LUGARU_OBJS "Lugaru.res")
-endif(WIN32)
+endif()
 
 if(APPLE)
     set(PLATFORM_LIBS "-framework Carbon -framework Cocoa -framework OpenGL -framework OpenAL")
-endif(APPLE)
+endif()
 
 
 ### Dependencies
 
-if (NOT SWITCH_LIBNX)
+if (NOT NSWITCH)
+# TODO: Work on supporting "GLVND" instead.
+set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
-endif(NOT SWITCH_LIBNX)
+endif()
 
 # Windows is funky about OpenAL detection
 if(WIN32)
     pkg_check_modules(OPENAL openal REQUIRED)
     set(OPENAL_LIBRARY ${OPENAL_LIBRARIES})
-else(WIN32)
+else()
     find_package(OpenAL REQUIRED)
-endif(WIN32)
+endif()
 
 # macOS has problems with using pkgconfig to find SDL2
 if(APPLE)
     find_package(sdl2 REQUIRED)
-else(APPLE)
+else()
     pkg_check_modules(SDL2 sdl2 REQUIRED)
-endif(APPLE)
+endif()
 
 find_package(PNG REQUIRED)
 find_package(JPEG REQUIRED)
@@ -238,11 +245,11 @@ set(LUGARU_LIBS ${OPENAL_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY} ${SDL2_LIBRARIE
 
 ### Definitions
 
-if(SWITCH_LIBNX)
+if(NSWITCH)
     set(LUGARU_SRCS ${LUGARU_SRCS} ${SRCDIR}/Thirdparty/glad/glad.c)
     set(LUGARU_H ${LUGARU_H} ${SRCDIR}/Thirdparty/glad/glad.h)
     set(LUGARU_LIBS ${LUGARU_LIBS} ${ZLIB_LIBRARY})
-endif(SWITCH_LIBNX)
+endif()
 
 add_executable(lugaru ${LUGARU_SRCS} ${LUGARU_H} ${LUGARU_OBJS})
 target_link_libraries(lugaru ${LUGARU_LIBS})
@@ -252,36 +259,28 @@ if(WIN32)
     if(MINGW)
         # An alternative would be to use _WIN32 consistently instead of WIN32
         add_definitions(-DWIN32)
-    endif(MINGW)
-else(WIN32)
-    if(SWITCH_LIBNX)
-        set(CMAKE_C_FLAGS "-O2 -ffunction-sections -fdata-sections -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE -ftls-model=local-exec")
-        set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
-        include_directories($ENV{DEVKITPRO}/libnx/include)
-        add_definitions(-DBinIO_STDINT_HEADER=<stdint.h> -D__SWITCH__)
-    else(SWITCH_LIBNX)
-        add_definitions(-DPLATFORM_LINUX=1 -DPLATFORM_UNIX=1 -DBinIO_STDINT_HEADER=<stdint.h>)
-    endif(SWITCH_LIBNX)
-endif(WIN32)
-
+    endif()
+elseif(NSWITCH)
+    add_definitions(-DBinIO_STDINT_HEADER=<stdint.h> -D__SWITCH__)
+else()
+    add_definitions(-DPLATFORM_LINUX=1 -DPLATFORM_UNIX=1 -DBinIO_STDINT_HEADER=<stdint.h>)
+endif()
 
 ### Installation
 
 if(NOT CMAKE_INSTALL_PREFIX AND WIN32)
     set(CMAKE_INSTALL_PREFIX "C:/Lugaru")
-endif(NOT CMAKE_INSTALL_PREFIX AND WIN32)
+endif()
 
 # OS-specific installation paths
 
 set(LUGARU_DOCDIR ${CMAKE_INSTALL_PREFIX})
-if(LINUX)
-endif(LINUX)
 
 if(APPLE)
     set(LUGARU_APP_ROOT ${CMAKE_INSTALL_PREFIX}/Lugaru.app)
     set(LUGARU_BINDIR ${LUGARU_APP_ROOT}/Contents/MacOS)
     set(LUGARU_RESDIR ${LUGARU_APP_ROOT}/Contents/Resources)
-endif(APPLE)
+endif()
 
 # Actual installation instructions
 
@@ -289,18 +288,24 @@ if(WIN32)
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/lugaru.exe DESTINATION ${CMAKE_INSTALL_PREFIX})
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/Data DESTINATION ${CMAKE_INSTALL_PREFIX})
     if(MINGW)
-        # Based off Mageia/Fedora MinGW toolchain, might not work on other distros or Windows
-        set(LIBGCC_S libgcc_s_sjlj-1.dll)
-        if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64") # MinGW64
-            set(LIBGCC_S libgcc_s_seh-1.dll)
-        endif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-        # FIXME: Filter out unneeded DLLs when building against some internal deps
         set(DLL_ROOT ${CMAKE_FIND_ROOT_PATH}/bin)
+        # We need the shared libgcc, but it can have different names based on arch/config/version.
+        # Ideally we'd check what our deps and lugaru.exe actually require, but for now it's a hack.
+        # Based off Mageia/Fedora MinGW toolchain, might not work on other distros or Windows
+        if(EXISTS ${DLL_ROOT}/libgcc_s_seh-1.dll)
+            set(LIBGCC_S libgcc_s_seh-1.dll)
+        elseif(EXISTS ${DLL_ROOT}/libgcc_s_dw2-1.dll)
+            set(LIBGCC_S libgcc_s_dw2-1.dll)
+        elseif(EXISTS ${DLL_ROOT}/libgcc_s_sjlj-1.dll)
+            set(LIBGCC_S libgcc_s_sjlj-1.dll)
+        endif()
+        # FIXME: Filter out unneeded DLLs when building against some internal deps
         install(FILES ${DLL_ROOT}/${LIBGCC_S}
                       ${DLL_ROOT}/libjpeg-62.dll
                       ${DLL_ROOT}/libjsoncpp.dll
                       ${DLL_ROOT}/libogg-0.dll
                       ${DLL_ROOT}/libpng16-16.dll
+                      ${DLL_ROOT}/libssp-0.dll
                       ${DLL_ROOT}/libstdc++-6.dll
                       ${DLL_ROOT}/libvorbis-0.dll
                       ${DLL_ROOT}/libvorbisfile-3.dll
@@ -309,8 +314,8 @@ if(WIN32)
                       ${DLL_ROOT}/SDL2.dll
                       ${DLL_ROOT}/zlib1.dll
                 DESTINATION ${CMAKE_INSTALL_PREFIX})
-    endif(MINGW)
-endif(WIN32)
+    endif()
+endif()
 
 if(LINUX)
     if(SYSTEM_INSTALL)
@@ -319,23 +324,23 @@ if(LINUX)
         install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/lugaru DESTINATION ${CMAKE_INSTALL_BINDIR})
         # Trailing '/' is significant, it installs and _renames_ Data/ as the destination folder
         install(DIRECTORY ${CMAKE_SOURCE_DIR}/Data/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
-        install(FILES ${CMAKE_SOURCE_DIR}/Dist/Linux/lugaru.appdata.xml DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/appdata)
         install(FILES ${CMAKE_SOURCE_DIR}/Dist/Linux/lugaru.desktop DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
+        install(FILES ${CMAKE_SOURCE_DIR}/Dist/Linux/lugaru.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
         install(FILES ${CMAKE_SOURCE_DIR}/Dist/Linux/lugaru.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps)
         install(FILES ${CMAKE_SOURCE_DIR}/Dist/Linux/lugaru.6 DESTINATION ${CMAKE_INSTALL_MANDIR}/man6)
-    else(SYSTEM_INSTALL)
+    else()
         message("You are building Lugaru without having enabled the SYSTEM_INSTALL option. It will default to looking for the data in the 'Data' directory next to the binary.")
         install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/lugaru DESTINATION ${CMAKE_INSTALL_PREFIX})
         install(DIRECTORY ${CMAKE_SOURCE_DIR}/Data DESTINATION ${CMAKE_INSTALL_PREFIX})
-    endif(SYSTEM_INSTALL)
-endif(LINUX)
+    endif()
+endif()
 
 if(APPLE)
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/lugaru DESTINATION ${LUGARU_BINDIR})
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/Data DESTINATION ${LUGARU_APP_ROOT})
     install(FILES ${CMAKE_SOURCE_DIR}/Dist/OSX/Lugaru.icns DESTINATION ${LUGARU_RESDIR})
     install(FILES ${CMAKE_SOURCE_DIR}/Dist/OSX/Info.plist DESTINATION ${LUGARU_APP_ROOT}/Contents)
-endif(APPLE)
+endif()
 
 # Documentation
 
@@ -350,7 +355,7 @@ install(FILES ${CMAKE_SOURCE_DIR}/AUTHORS
               ${CMAKE_SOURCE_DIR}/Docs/README.Temple.txt
         DESTINATION ${LUGARU_DOCDIR})
 
-if(SWITCH_LIBNX)
+if(NSWITCH)
     add_custom_target(${CMAKE_PROJECT_NAME}.nro
         DEPENDS ${CMAKE_PROJECT_NAME}
         COMMAND nacptool --create "Lugaru" "usineur" ${LUGARU_VERSION_NUMBER} ${CMAKE_PROJECT_NAME}.nacp
@@ -361,4 +366,4 @@ if(SWITCH_LIBNX)
         DEPENDS ${CMAKE_PROJECT_NAME}.nro
         COMMAND nxlink -a $(SWITCHIP) ${CMAKE_PROJECT_NAME}.nro -s -p ${CMAKE_PROJECT_NAME}/${CMAKE_PROJECT_NAME}.nro
     )
-endif(SWITCH_LIBNX)
+endif()

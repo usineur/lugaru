@@ -202,14 +202,17 @@ endif()
 
 ### Dependencies
 
-if (NOT NSWITCH)
+if (NINTENDO_SWITCH)
+find_package(GLEW REQUIRED)
+find_library(GLEW_LIBRARY NAMES GLEW)
+else()
 # TODO: Work on supporting "GLVND" instead.
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
 endif()
 
 # Windows is funky about OpenAL detection
-if(WIN32)
+if(WIN32 OR NINTENDO_SWITCH)
     pkg_check_modules(OPENAL openal REQUIRED)
     set(OPENAL_LIBRARY ${OPENAL_LIBRARIES})
 else()
@@ -245,10 +248,8 @@ set(LUGARU_LIBS ${OPENAL_LIBRARY} ${PNG_LIBRARY} ${JPEG_LIBRARY} ${SDL2_LIBRARIE
 
 ### Definitions
 
-if(NSWITCH)
-    set(LUGARU_SRCS ${LUGARU_SRCS} ${SRCDIR}/Thirdparty/glad/glad.c)
-    set(LUGARU_H ${LUGARU_H} ${SRCDIR}/Thirdparty/glad/glad.h)
-    set(LUGARU_LIBS ${LUGARU_LIBS} ${ZLIB_LIBRARY})
+if(NINTENDO_SWITCH)
+    set(LUGARU_LIBS ${GLEW_LIBRARY} ${LUGARU_LIBS} ${ZLIB_LIBRARY})
 endif()
 
 add_executable(lugaru ${LUGARU_SRCS} ${LUGARU_H} ${LUGARU_OBJS})
@@ -260,7 +261,7 @@ if(WIN32)
         # An alternative would be to use _WIN32 consistently instead of WIN32
         add_definitions(-DWIN32)
     endif()
-elseif(NSWITCH)
+elseif(NINTENDO_SWITCH)
     add_definitions(-DBinIO_STDINT_HEADER=<stdint.h> -D__SWITCH__)
 else()
     add_definitions(-DPLATFORM_LINUX=1 -DPLATFORM_UNIX=1 -DBinIO_STDINT_HEADER=<stdint.h>)
@@ -355,7 +356,7 @@ install(FILES ${CMAKE_SOURCE_DIR}/AUTHORS
               ${CMAKE_SOURCE_DIR}/Docs/README.Temple.txt
         DESTINATION ${LUGARU_DOCDIR})
 
-if(NSWITCH)
+if(NINTENDO_SWITCH)
     add_custom_target(${CMAKE_PROJECT_NAME}.nro
         DEPENDS ${CMAKE_PROJECT_NAME}
         COMMAND nacptool --create "Lugaru" "usineur" ${LUGARU_VERSION_NUMBER} ${CMAKE_PROJECT_NAME}.nacp

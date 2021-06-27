@@ -283,7 +283,12 @@ bool SetUp()
 
     glctx = SDL_GL_CreateContext(sdlwindow);
 #ifdef __SWITCH__
-    gladLoadGLLoader(SDL_GL_GetProcAddress);
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        fprintf(stderr, "glewInit() failed: %s\n", glewGetErrorString(err));
+        SDL_Quit();
+        return false;
+    }
 #endif
     if (!glctx) {
         fprintf(stderr, "SDL_GL_CreateContext() failed: %s\n", SDL_GetError());
